@@ -12,7 +12,7 @@
         "-Tlayout.ld"
     ],
     "post-link-args": [
-        "-lm", "-lgcc", "-lnosys"
+        "-lm", "-lgcc", "-lnosys", "-nostdlib", "-ffreestanding", "-fno-rtti"
     ],
     "executables": true,
     "relocation-model": "static",

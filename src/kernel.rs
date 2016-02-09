@@ -1,37 +1,72 @@
 #![feature(lang_items, asm, core_intrinsics)]
 #![crate_type = "staticlib"]
 #![no_std]
-use core::intrinsics::{volatile_store, volatile_load};
 
-const GPIO_BASE: u32 = 0x20200000;
-const LED_GPFSEL: isize = 1;
-const LED_GPSET: isize = 7;
-const LED_GPCLR: isize = 10;
-const LED_GPFBIT: isize = 18;
-const LED_GPIO_BIT : isize = 16;
+mod interrupts;
+#[allow(unused_imports)]
+use interrupts::*;
+
+mod gpio;
+use gpio::Gpio;
+
+mod rpi_timer;
+use rpi_timer::RpiTimer;
 
 #[no_mangle]
-pub extern fn main() {
-    let gpio = GPIO_BASE as *mut u32;
+pub extern fn main(){
+    setup_stack();
+    //let wait_time = fib(FIB_WAIT_TIME);
+    let gpio = Gpio::new();
+
     loop {
-        unsafe {
-            let func_sel = volatile_load(gpio.offset(LED_GPFSEL)) | (1 << LED_GPFBIT);
-            volatile_store(gpio.offset(LED_GPFSEL), func_sel);
+        gpio.ok_on(true);
+        wait(500_000);
+        gpio.ok_on(false);
+        wait(500_000);
+    }
 
-            volatile_store(gpio.offset(LED_GPCLR), (1 << LED_GPIO_BIT));
+    //let _timer = RpiTimer::get();
 
-            for _ in 0..500000 {
-                asm!("");
-            }
+}
 
-            /* gpio[LED_GPSET] = (1 << LED_GPIO_BIT); */
-            volatile_store(gpio.offset(LED_GPSET), (1 << LED_GPIO_BIT));
+#[no_mangle]
+pub unsafe extern fn memcpy(dest: *mut u8, src: *const u8,
+                            n: usize) -> *mut u8 {
+    let mut i = 0;
+    while i < n {
+        *dest.offset(i as isize) = *src.offset(i as isize);
+        i += 1;
+    }
+    return dest;
+}
 
-            for _ in 0..500000 {
-                asm!("");
-            }
-        }
+#[no_mangle]
+pub extern fn abort(){
+    loop {}
+}
 
+#[allow(dead_code)]
+#[inline(never)]
+fn wait(n : u32){
+    for _ in 0..n {
+        unsafe { asm!(""); }
+    }
+}
+
+#[cfg(target_arch = "arm")]
+#[inline(always)]
+fn setup_stack(){
+    unsafe { asm!("ldr sp, =0x8000"); }
+}
+
+#[cfg(target_arch = "x86_64")]
+fn setup_stack(){}
+
+#[allow(dead_code)]
+fn fib(n : u8) -> u32{
+    match n {
+        0|1 => n as u32,
+        n => return fib(n-1)+fib(n-2)
     }
 }
 

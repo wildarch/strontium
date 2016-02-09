@@ -3,4 +3,9 @@ name = "strontium"
 version = "0.1.0"
 authors = ["Daan de Graaf <daandegraaf9@gmail.com>"]
 
+[lib]
+name="kernel"
+crate-type = ["staticlib"]
+
 [dependencies]
+rlibc = "1.0"
