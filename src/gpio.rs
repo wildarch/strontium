@@ -1,4 +1,5 @@
-const GPIO_BASE: u32 = 0x20200000;
+use rpi_const::GPIO_BASE;
+
 const LED_GPFSEL: isize = 1;
 const LED_GPSET: isize = 7;
 const LED_GPCLR: isize = 10;

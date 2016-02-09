@@ -2,30 +2,34 @@
 #![crate_type = "staticlib"]
 #![no_std]
 
-mod interrupts;
-#[allow(unused_imports)]
-use interrupts::*;
-
 mod gpio;
 use gpio::Gpio;
+
+mod rpi_const;
+
+mod interrupts;
+pub use interrupts::*;
 
 mod rpi_timer;
 use rpi_timer::RpiTimer;
 
+extern {
+    fn _enable_interrupts();
+}
+
 #[no_mangle]
 pub extern fn main(){
     setup_stack();
-    //let wait_time = fib(FIB_WAIT_TIME);
-    let gpio = Gpio::new();
+
+    IrqController::get().enable_timer();
+
+    let mut timer = RpiTimer::get();
+    timer.setup();
+
+    unsafe { _enable_interrupts() };
 
     loop {
-        gpio.ok_on(true);
-        wait(500_000);
-        gpio.ok_on(false);
-        wait(500_000);
     }
-
-    //let _timer = RpiTimer::get();
 
 }
 
