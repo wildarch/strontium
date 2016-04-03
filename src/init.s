@@ -32,6 +32,7 @@
 .global _get_stack_pointer
 .global _exception_table
 .global _enable_interrupts
+.global _enable_vfp
 
 // From the ARM ARM (Architecture Reference Manual). Make sure you get the
 // ARMv5 documentation which includes the ARMv6 documentation which is the
@@ -47,7 +48,7 @@
 .equ    CPSR_MODE_SVR,          0x13
 .equ    CPSR_MODE_ABORT,        0x17
 .equ    CPSR_MODE_UNDEFINED,    0x1B
-.equ    CPSR_MODE_SYSTEM,       0x1F
+.equ    CPSR_MODE_SVCTEM,       0x1F
 
 // See ARM section A2.5 (Program status registers)
 .equ    CPSR_IRQ_INHIBIT,       0x80
@@ -104,7 +105,7 @@ _reset_:
     // boundary!
     mov     sp, #(64 * 1024 * 1024)
 
-    // The c-startup function which we never return from. This function will
+    // The function which we never return from. This function will
     // initialise the ro data section (most things that have the const
     // declaration) and initialise the bss section variables to 0 (generally
     // known as automatics). It'll then call main, which should never return.
@@ -120,18 +121,18 @@ interrupt_vector:
     sub lr, lr, #4
 
     /* [Store Return State Decrement Before] */
-    /* Store the return state on the SYS mode stack.  This includes
-    * SPSR_irq, which is the CPSR from SYS mode before we were interrupted,
+    /* Store the return state on the SVC mode stack.  This includes
+    * SPSR_irq, which is the CPSR from SVC mode before we were interrupted,
     * and LR_irq, which is the address to which we must return to continue
     * execution of the interrupted thread.  */
-    srsdb 0x1F!
+    srsdb 0x13!
 
     /* [Change Program State Interrupt Disable] */
-    /* Change to SYS mode, with IRQs and FIQs still disabled.  */
-    cpsid if, 0x1F
+    /* Change to SVC mode, with IRQs and FIQs still disabled.  */
+    cpsid if, 0x13
 
-    /* Save on the SYS mode stack any registers that may be clobbered,
-    * namely the SYS mode LR and all other caller-save general purpose
+    /* Save on the SVC mode stack any registers that may be clobbered,
+    * namely the SVC mode LR and all other caller-save general purpose
     * registers.  Also save r4 so we can use it to store the amount we
     * decremented the stack pointer by to align it to an 8-byte boundary
     * (see comment below).  */
@@ -160,11 +161,11 @@ interrupt_vector:
     * above).  */
     add sp, sp, r4
 
-    /* Restore the above-mentioned registers from the SYS mode stack. */
+    /* Restore the above-mentioned registers from the SVC mode stack. */
     pop {r0-r4, r12, lr}
 
     /* [Return From Exception Increment After] */
-    /* Load the original SYS-mode CPSR and PC that were saved on the SYS
+    /* Load the original SVC-mode CPSR and PC that were saved on the SVC
     * mode stack.  */
     rfeia sp!
 

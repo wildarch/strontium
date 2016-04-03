@@ -9,6 +9,8 @@ use rpi_const::PERIPHERAL_BASE;
 
 use rpi_timer::RpiTimer;
 
+use uart;
+
 const INTERRUPT_CONTROLLER_BASE : usize = PERIPHERAL_BASE + 0xB200;
 
 const RPI_BASIC_ARM_TIMER_IRQ     : u32 = (1 << 0);
@@ -79,6 +81,7 @@ pub unsafe extern fn interrupt_vector_handler(){
     static mut lit: bool = false;
 
     RpiTimer::get().clear_irq();
+    uart::write("IRQ;");
 
     if lit {
         Gpio::new().ok_on(false);
@@ -88,7 +91,4 @@ pub unsafe extern fn interrupt_vector_handler(){
         Gpio::new().ok_on(true);
         lit = true;
     }
-
 }
-
-//END INTERRUPT HANDLERS
