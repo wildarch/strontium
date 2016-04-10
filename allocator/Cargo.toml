@@ -1,0 +1,8 @@
+[package]
+name = "allocator"
+version = "0.1.0"
+authors = ["Daan de Graaf <daandegraaf9@gmail.com>"]
+
+[lib]
+name="allocator"
+crate-type = ["rlib"]

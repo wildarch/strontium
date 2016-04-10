@@ -41,7 +41,7 @@ impl RpiTimer {
     }
 
     pub fn setup(&mut self) {
-
+        //Higher is longer interval
         unsafe { volatile_store(&mut self.load, 0x10000); }
 
         let control =   RPI_ARMTIMER_CTRL_23BIT |

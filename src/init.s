@@ -1,38 +1,8 @@
-
-//  Part of the Raspberry-Pi Bare Metal Tutorials
-//  Copyright (c) 2013, Brian Sidebotham
-//  All rights reserved.
-//
-//  Redistribution and use in source and binary forms, with or without
-//  modification, are permitted provided that the following conditions are met:
-//
-//  1. Redistributions of source code must retain the above copyright notice,
-//      this list of conditions and the following disclaimer.
-//
-//  2. Redistributions in binary form must reproduce the above copyright notice,
-//      this list of conditions and the following disclaimer in the
-//      documentation and/or other materials provided with the distribution.
-//
-//  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-//  AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-//  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-//  ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
-//  LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-//  CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-//  SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-//  INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-//  CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-//  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-//  POSSIBILITY OF SUCH DAMAGE.
-
-
 .section ".text.startup"
 
 .global _start
-.global _get_stack_pointer
-.global _exception_table
-.global _enable_interrupts
-.global _enable_vfp
+.global enable_interrupts
+.global dmb
 
 // From the ARM ARM (Architecture Reference Manual). Make sure you get the
 // ARMv5 documentation which includes the ARMv6 documentation which is the
@@ -55,7 +25,9 @@
 .equ    CPSR_FIQ_INHIBIT,       0x40
 .equ    CPSR_THUMB,             0x20
 
+// EXECUTION START
 _start:
+    //We conveniently jump to reset, so we can first setup the vector table
     ldr pc, _reset_h
     ldr pc, _undefined_instruction_vector_h
     ldr pc, _software_interrupt_vector_h
@@ -75,40 +47,22 @@ _start:
     _fast_interrupt_vector_h:           .word   fast_interrupt_vector
 
 _reset_:
-    // We enter execution in supervisor mode. For more information on
-    // processor modes see ARM Section A2.2 (Processor Modes)
+    // We enter in supervisor mode
 
-    mov     r0, #0x8000
-    mov     r1, #0x0000
+    //Copy the vector table to the start of memory
+    mov     r0, #0x8000 // It starts at 0x8000 as that's where our image is loaded
+    mov     r1, #0x0000 // The vector table should be here
     ldmia   r0!,{r2, r3, r4, r5, r6, r7, r8, r9}
     stmia   r1!,{r2, r3, r4, r5, r6, r7, r8, r9}
     ldmia   r0!,{r2, r3, r4, r5, r6, r7, r8, r9}
     stmia   r1!,{r2, r3, r4, r5, r6, r7, r8, r9}
-
-    // We're going to use interrupt mode, so setup the interrupt mode
-    // stack pointer which differs to the application stack pointer:
-    mov r0, #(CPSR_MODE_IRQ | CPSR_IRQ_INHIBIT | CPSR_FIQ_INHIBIT )
-    msr cpsr_c, r0
-    mov sp, #(63 * 1024 * 1024)
-
-    // Switch back to supervisor mode (our application mode) and
-    // set the stack pointer towards the end of RAM. Remember that the
-    // stack works its way down memory, our heap will work it's way
-    // up memory toward the application stack.
-    mov r0, #(CPSR_MODE_SVR | CPSR_IRQ_INHIBIT | CPSR_FIQ_INHIBIT )
-    msr cpsr_c, r0
 
     // Set the stack pointer at some point in RAM that won't harm us
-    // It's different from the IRQ stack pointer above and no matter
-    // what the GPU/CPU memory split, 64MB is available to the CPU
-    // Keep it within the limits and also keep it aligned to a 32-bit
-    // boundary!
+    // No matter what the GPU/CPU memory split, 64MB is available to the CPU
+    // Keep it within the limits and also keep it aligned to a 32-bit boundary!
     mov     sp, #(64 * 1024 * 1024)
 
-    // The function which we never return from. This function will
-    // initialise the ro data section (most things that have the const
-    // declaration) and initialise the bss section variables to 0 (generally
-    // known as automatics). It'll then call main, which should never return.
+    // The rust main function
     bl      main
 
     // If main does return for some reason, just catch it and stay here.
@@ -125,11 +79,11 @@ interrupt_vector:
     * SPSR_irq, which is the CPSR from SVC mode before we were interrupted,
     * and LR_irq, which is the address to which we must return to continue
     * execution of the interrupted thread.  */
-    srsdb 0x13!
+    srsdb CPSR_MODE_SVR!
 
     /* [Change Program State Interrupt Disable] */
     /* Change to SVC mode, with IRQs and FIQs still disabled.  */
-    cpsid if, 0x13
+    cpsid if, CPSR_MODE_SVR
 
     /* Save on the SVC mode stack any registers that may be clobbered,
     * namely the SVC mode LR and all other caller-save general purpose
@@ -169,6 +123,10 @@ interrupt_vector:
     * mode stack.  */
     rfeia sp!
 
+/*
+  Triggers a data memory barrier, all code that comes before this
+  is guaranteed to be finished once we return from this function
+*/
 dmb:
   	.func dmb
   	mov	r12, #0
@@ -176,17 +134,7 @@ dmb:
   	mov 	pc, lr
   	.endfunc
 
-
-_get_stack_pointer:
-    // Return the stack pointer value
-    str     sp, [sp]
-    ldr     r0, [sp]
-
-    // Return from the function
-    mov     pc, lr
-
-
-_enable_interrupts:
+enable_interrupts:
     mrs     r0, cpsr
     bic     r0, r0, #0x80
     msr     cpsr_c, r0

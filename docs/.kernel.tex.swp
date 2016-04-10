@@ -1,0 +1,38 @@
+\documentclass[11pt]{article}
+%Gummi|065|=)
+\title{\textbf{Strontium - Kernel documentation}}
+\author{Daan de Graaf}
+
+\newcommand{\KernelAddr}{$0x2 000 000$}
+
+
+\begin{document}
+
+\maketitle
+
+\section{Kernel phases}
+\subsection{Initialization}
+\begin{itemize}
+\item Relocate kernel from $0x8000$ to \KernelAddr
+\item Clear the bss section
+\item Setup the stack pointer for the supervisor mode
+\item Run the main function
+\end{itemize}
+
+\section{Processor modes}
+\begin{tabular}{ l | l | l }
+  Mode & Binary identifier & Hexadecimal\\ \hline
+  User & 0b10000 & 0x10 \\
+  FIQ - Fast Interrupt & 0b10001 & 0x11\\
+  IRQ - Interrupt & 0b10010 & 0x12\\
+  Supervisor & 0b10011 & 0x13\\
+  \hline \hline
+  Abort - Invalid address & 0b10111 & 0x17\\
+  \hline \hline
+  Undefined instruction & 0b11011 & 0x1B\\
+  \hline \hline
+  System & 0b11111 & 0x1F
+\end{tabular}
+
+
+\end{document}

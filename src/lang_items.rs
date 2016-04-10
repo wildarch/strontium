@@ -6,6 +6,7 @@ use core::fmt;
 pub unsafe extern "C" fn panic_impl(args: fmt::Arguments, file: &'static str, line: u32) -> ! {
     uart::write("PANIC!!!");
     uart::write(file);
+    println!("Line: {}", line);
     loop {}
 }
 
@@ -18,12 +19,12 @@ pub extern fn abort(){
 }
 
 #[no_mangle]
-pub unsafe extern fn memcpy(dest: *mut u8, src: *const u8,
-                            n: usize) -> *mut u8 {
+pub unsafe extern fn __aeabi_memclr4(s: *mut u8, n: usize) -> *mut u8 {
     let mut i = 0;
     while i < n {
-        *dest.offset(i as isize) = *src.offset(i as isize);
+        asm!("");
+        *s.offset(i as isize) = 0u8;
         i += 1;
     }
-    return dest;
+    return s;
 }

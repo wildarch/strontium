@@ -9,3 +9,7 @@ crate-type = ["staticlib"]
 
 [dependencies]
 rlibc = "1.0"
+#rust-libcore = "*"
+
+[dependencies.allocator]
+path = "allocator"

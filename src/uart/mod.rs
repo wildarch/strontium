@@ -90,12 +90,12 @@ pub fn putc(byte: u8){
     }
 }
 
-pub fn getc() -> u8 {
+pub fn getc() -> char {
     unsafe {
+        // Wait for UART to have received something.
         while mmio_read(UART0_FR) & (1 << 4) != 0 { }
-        return mmio_read(UART0_DR) as u8;
+        return mmio_read(UART0_DR) as u8 as char;
     }
-    // Wait for UART to have received something.
 }
 
 pub fn write(buffer: &str){

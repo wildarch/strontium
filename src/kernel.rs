@@ -1,5 +1,14 @@
-#![feature(lang_items, asm, core_intrinsics)]
+#![feature(lang_items, asm, core_intrinsics, naked_functions)]
+#![feature(collections, alloc, allocator)]
 #![no_std]
+
+extern crate collections;
+extern crate alloc;
+extern crate rlibc;
+
+extern crate allocator as _allocator;
+
+pub use rlibc::*;
 
 #[macro_use]
 mod macros;
@@ -7,6 +16,7 @@ mod macros;
 mod uart;
 mod gpio;
 mod rpi_const;
+mod mem;
 
 mod interrupts;
 pub use interrupts::*;
@@ -17,10 +27,8 @@ use rpi_timer::RpiTimer;
 mod lang_items;
 pub use lang_items::*;
 
-mod mailbox;
-
 extern {
-    fn _enable_interrupts();
+    fn enable_interrupts();
 }
 
 #[no_mangle]
@@ -38,10 +46,14 @@ pub extern fn main(){
     timer.setup();
 
     unsafe {
-        _enable_interrupts();
+        enable_interrupts();
      };
 
     log("Interrupts enabled");
+    let kernel_mem = mem::kernel::KernelLocationInfo::new();
+    let range = kernel_mem.range();
+    println!("Kernel range runs from {:X} to {:X}. Size: {}", range.start, range.end, kernel_mem.size());
+
     loop {}
 
 }
