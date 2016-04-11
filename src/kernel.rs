@@ -17,7 +17,6 @@ mod uart;
 mod gpio;
 mod rpi_const;
 mod mem;
-pub use mem::kernel::relocate;
 
 mod interrupts;
 pub use interrupts::*;
