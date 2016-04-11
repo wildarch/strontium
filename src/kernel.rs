@@ -30,8 +30,6 @@ pub use lang_items::*;
 
 extern {
     fn enable_interrupts();
-    fn disable_interrupts();
-    fn get_pc() -> &usize;
 }
 
 #[no_mangle]
@@ -53,9 +51,6 @@ pub extern fn main(){
      };
 
     log("Interrupts enabled");
-
-    println!("---Kernel location info---\nstart: {:X}\nend: {:X}\nsize: {}", mem::kernel::start(), mem::kernel::end(), mem::kernel::size());
-
     loop {}
 
 }
