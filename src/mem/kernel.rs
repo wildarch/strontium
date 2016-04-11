@@ -1,38 +1,52 @@
-use core::ops::Range;
+use core::intrinsics::copy as memcpy;
+use core::mem;
 
 extern {
     // Linker script constants
     static kernel_start: u8;
-    static text_start: u8;
-    static text_end: u8;
+    //static text_start: u8;
+    //static text_end: u8;
     static kernel_end: u8;
 }
 
-#[derive(Clone, Copy)]
-pub struct KernelLocationInfo {
-    start_addr: usize,
-    end_addr: usize
+pub fn start() -> usize {
+    &kernel_start as *const u8 as usize
 }
 
-impl KernelLocationInfo {
-    pub fn new() -> KernelLocationInfo {
-        let start = &text_start as *const u8 as usize;
-        let end = &text_end as *const u8 as usize;
+pub fn end() -> usize {
+    &kernel_end as *const u8 as usize
+}
 
-        KernelLocationInfo {
-            start_addr: start,
-            end_addr: end
-        }
-    }
+pub fn size() -> usize {
+    end() - start()
+}
 
-    pub fn size(&self) -> usize {
-        self.end_addr - self.start_addr
-    }
+/*
+#[naked]
+#[no_mangle]
+#[inline(never)]
+pub unsafe fn relocate(start_addr: *mut u8) {
+    asm!("push {r4, r5, fp}":::: "volatile");
+    let start = start() as *const u8;
+    //Copy the kernel to the new address
+    memcpy(start, start_addr, size());
+    //Calculate the offset
+    let offset = start_addr as usize - start as usize;
+    assert_eq!(*start_addr, *start);
+    //Now fix the return address and pretend like nothing happend...
+    asm!("
+        add LR, $0
+        pop {r4, r5, fp}
+        mov PC, LR
+    " :: "r"(offset));
+}
+*/
 
-    pub fn range(&self) -> Range<u8> {
-        Range {
-            start: kernel_start,
-            end: kernel_end
-        }
-    }
+#[no_mangle]
+#[inline(never)]
+pub unsafe fn relocate(start_addr: *mut u8) {
+    let start = start() as *const u8;
+    memcpy(start, start_addr, size());
+    let start_fn: fn(a: usize) = mem::transmute(start_addr);
+    start_fn(1001);
 }

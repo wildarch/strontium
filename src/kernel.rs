@@ -17,6 +17,7 @@ mod uart;
 mod gpio;
 mod rpi_const;
 mod mem;
+pub use mem::kernel::relocate;
 
 mod interrupts;
 pub use interrupts::*;
@@ -29,6 +30,8 @@ pub use lang_items::*;
 
 extern {
     fn enable_interrupts();
+    fn disable_interrupts();
+    fn get_pc() -> &usize;
 }
 
 #[no_mangle]
@@ -50,9 +53,8 @@ pub extern fn main(){
      };
 
     log("Interrupts enabled");
-    let kernel_mem = mem::kernel::KernelLocationInfo::new();
-    let range = kernel_mem.range();
-    println!("Kernel range runs from {:X} to {:X}. Size: {}", range.start, range.end, kernel_mem.size());
+
+    println!("---Kernel location info---\nstart: {:X}\nend: {:X}\nsize: {}", mem::kernel::start(), mem::kernel::end(), mem::kernel::size());
 
     loop {}
 
@@ -61,4 +63,11 @@ pub extern fn main(){
 fn log(s: &str){
     uart::write("[LOG] ");
     uart::writeln(s);
+}
+
+#[allow(dead_code)]
+fn wait(s: u32) {
+    for _ in 0..s {
+        unsafe { asm!(""); }
+    }
 }

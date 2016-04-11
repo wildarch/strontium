@@ -2,7 +2,9 @@
 
 .global _start
 .global enable_interrupts
+.global disable_interrupts
 .global dmb
+.global get_pc
 
 // From the ARM ARM (Architecture Reference Manual). Make sure you get the
 // ARMv5 documentation which includes the ARMv6 documentation which is the
@@ -48,6 +50,7 @@ _start:
 
 _reset_:
     // We enter in supervisor mode
+    push    {r0}
 
     //Copy the vector table to the start of memory
     mov     r0, #0x8000 // It starts at 0x8000 as that's where our image is loaded
@@ -63,6 +66,7 @@ _reset_:
     mov     sp, #(64 * 1024 * 1024)
 
     // The rust main function
+    pop     {r0}
     bl      main
 
     // If main does return for some reason, just catch it and stay here.
@@ -135,8 +139,20 @@ dmb:
   	.endfunc
 
 enable_interrupts:
+    /*
     mrs     r0, cpsr
     bic     r0, r0, #0x80
     msr     cpsr_c, r0
 
+    mov     pc, lr
+    */
+    cpsie   I
+    mov     pc, lr
+
+disable_interrupts:
+    cpsid   I
+    mov     pc, lr
+
+get_pc:
+    mov     r0, pc
     mov     pc, lr

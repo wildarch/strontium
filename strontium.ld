@@ -21,4 +21,5 @@ SECTIONS
   .ARM.exidx   : { *(.ARM.exidx* .gnu.linkonce.armexidx.*) }
    PROVIDE_HIDDEN (__exidx_end = .);
    kernel_end = .;
+   the_end = .;
 }

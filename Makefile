@@ -39,6 +39,9 @@ RUST_GIT = ../rust
 RUSTC = multirust run $(TOOLCHAIN) rustc
 RUSTC_OPTS = --target arm-none-eabi -O -Z no-landing-pads --out-dir $(RLIBDIR)
 
+# Clean first, otherwise some files might not be updated
+all: clean bin/kernel.img
+
 bin/kernel.img: elf/kernel.elf
 	mkdir -p bin/
 	$(OBJCOPY) elf/kernel.elf -O binary bin/kernel.img
@@ -53,8 +56,6 @@ obj/init.o:
 
 $(RELEASE)/libkernel.a: rlibs
 	cargo build --release --target $(TARGET)
-
-all: bin/kernel.img
 
 #Clean only files in the source directory
 clean:
