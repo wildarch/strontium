@@ -16,7 +16,6 @@ mod macros;
 mod uart;
 mod gpio;
 mod rpi_const;
-mod mem;
 
 mod interrupts;
 pub use interrupts::*;
