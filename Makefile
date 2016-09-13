@@ -65,10 +65,12 @@ clean:
 clean-full: clean
 	rm -rf $(RLIBS_QUAL)
 
-run: bin/kernel.img
+#Clean first, so everything is up to date
+run: clean bin/kernel.img
 	raspbootcom /dev/ttyUSB0 bin/kernel.img
 
 $(RLIBDIR)/%.rlib:
+	mkdir -p $(RLIBDIR)
 	$(RUSTC) $(RUSTC_OPTS) $(RUST_GIT)/src/$*/lib.rs
 
 rlibs: rust-src-update $(RLIBS_QUAL)

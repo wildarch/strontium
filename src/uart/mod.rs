@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 
 use core::intrinsics::{volatile_load, volatile_store};
+use core::mem;
 
 use rpi_const::GPIO_BASE;
 // Controls actuation of pull up/down to ALL GPIO pins.
@@ -12,8 +13,8 @@ const GPPUDCLK0: usize = (GPIO_BASE + 0x98);
 // The base address for UART.
 const UART0_BASE: usize = 0x20201000;
 
-// The offsets for reach register for the UART.
-const UART0_DR    : usize = (UART0_BASE + 0x00);
+// The offsets for each register of the UART.
+const UART0_DR    : usize = UART0_BASE;
 const UART0_RSRECR: usize = (UART0_BASE + 0x04);
 const UART0_FR    : usize = (UART0_BASE + 0x18);
 const UART0_ILPR  : usize = (UART0_BASE + 0x20);
@@ -32,11 +33,14 @@ const UART0_ITIP  : usize = (UART0_BASE + 0x84);
 const UART0_ITOP  : usize = (UART0_BASE + 0x88);
 const UART0_TDR   : usize = (UART0_BASE + 0x8C);
 
+extern {
+    fn dmb();
+}
+
 #[cold]
 pub unsafe fn init() {
     // Disable UART0.
     mmio_write(UART0_CR, 0x00000000);
-    // Setup the GPIO pin 14 && 15.
 
     // Disable pull up/down for all GPIO pins & delay for 150 cycles.
     mmio_write(GPPUD, 0x00000000);
@@ -65,12 +69,12 @@ pub unsafe fn init() {
     // Enable FIFO & 8 bit data transmissio (1 stop bit, no parity).
     mmio_write(UART0_LCRH, (1 << 4) | (1 << 5) | (1 << 6));
 
-    // Mask all interrupts.
-    mmio_write(UART0_IMSC, (1 << 1) | (1 << 4) | (1 << 5) | (1 << 6) |
+    // Mask all interrupts but receive.
+    mmio_write(UART0_IMSC, (1 << 1) | (1 << 4) | (1 << 6) |
                            (1 << 7) | (1 << 8) | (1 << 9) | (1 << 10));
 
     // Enable UART0, receive & transfer part of UART.
-    mmio_write(UART0_CR, (1 << 0) | (1 << 8) | (1 << 9));
+    mmio_write(UART0_CR, 1 | (1 << 8) | (1 << 9));
 }
 
 #[inline]
@@ -90,12 +94,23 @@ pub fn putc(byte: u8){
     }
 }
 
-pub fn getc() -> char {
+pub fn getc() -> u8 {
     unsafe {
         // Wait for UART to have received something.
         while mmio_read(UART0_FR) & (1 << 4) != 0 { }
-        return mmio_read(UART0_DR) as u8 as char;
+        mmio_read(UART0_DR) as u8
     }
+}
+
+pub fn getc_im() -> u8 {
+    unsafe {
+        mmio_read(UART0_DR) as u8
+    }
+}
+
+pub fn get_u32() -> u32 {
+    let arr = [getc(), getc(), getc(), getc()];
+    unsafe { mem::transmute(arr) }
 }
 
 pub fn write(buffer: &str){
@@ -107,12 +122,23 @@ pub fn write(buffer: &str){
 
 pub fn writeln(buffer: &str){
     write(buffer);
-    putc('\n' as u8);
+    putc(b'\n');
 }
 
 #[inline(never)]
 fn wait(n : u32){
     for _ in 0..n {
         unsafe { asm!(""); }
+    }
+}
+
+pub fn get_ris() -> u32 {
+    unsafe { mmio_read(UART0_RIS) }
+}
+
+pub fn clear_rx() {
+    unsafe {
+        mmio_write(UART0_ICR, (1 << 4));
+        dmb();
     }
 }

@@ -1,18 +1,18 @@
 #![allow(dead_code)]
 
-use core::mem::transmute;
 use core::intrinsics::volatile_store;
+use core::intrinsics::volatile_load;
+use core::mem;
 
 use gpio::Gpio;
+use uart;
+use rpi_timer::RpiTimer;
 
 use rpi_const::PERIPHERAL_BASE;
 
-use rpi_timer::RpiTimer;
-use collections::String;
-
 const INTERRUPT_CONTROLLER_BASE : usize = PERIPHERAL_BASE + 0xB200;
 
-const RPI_BASIC_ARM_TIMER_IRQ     : u32 = (1 << 0);
+const RPI_BASIC_ARM_TIMER_IRQ     : u32 = 1;
 const RPI_BASIC_ARM_MAILBOX_IRQ   : u32 = (1 << 1);
 const RPI_BASIC_ARM_DOORBELL_0_IRQ: u32 = (1 << 2);
 const RPI_BASIC_ARM_DOORBELL_1_IRQ: u32 = (1 << 3);
@@ -35,7 +35,7 @@ pub struct IrqController {
 impl IrqController {
     pub fn get() -> &'static mut IrqController{
         unsafe {
-            transmute(INTERRUPT_CONTROLLER_BASE as *mut IrqController)
+            &mut *(INTERRUPT_CONTROLLER_BASE as *mut IrqController)
         }
     }
 
@@ -44,6 +44,24 @@ impl IrqController {
         unsafe {
             volatile_store(ptr, RPI_BASIC_ARM_TIMER_IRQ);
         }
+    }
+    pub fn enable_uart(&mut self) {
+        let ptr = &mut self.enable_irq[1] as *mut u32;
+        unsafe { volatile_store(ptr, 1 << (57-32)) };
+    }
+
+    pub fn get_pending(&mut self) -> (u32, u64) {
+        unsafe {
+            (self.irq_basic_pending(), self.irq_pending())
+        }
+    }
+
+    unsafe fn irq_basic_pending(&self) -> u32 {
+        volatile_load(&self.irq_basic_pending as *const u32)
+    }
+
+    unsafe fn irq_pending(&self) -> u64 {
+        mem::transmute(volatile_load(&self.irq_pending as *const [u32;2]))
     }
 }
 
@@ -60,7 +78,7 @@ pub extern fn fast_interrupt_vector(){
 
 #[no_mangle]
 pub extern fn undefined_instruction_vector(){
-    loop {}
+    panic!("Undefined instruction!");
 }
 
 #[no_mangle]
@@ -79,17 +97,25 @@ pub unsafe extern fn interrupt_vector_handler(){
 
     static mut lit: bool = false;
 
-    RpiTimer::get().clear_irq();
+    let (basic_irq, irq) = IrqController::get().get_pending();
 
-    let s = String::from("OK");
-    println!("All good: {}", &s);
-
-    if lit {
-        Gpio::new().ok_on(false);
-        lit = false;
+    if irq & (1 << 57) != 0 {
+        print!("{}", uart::getc_im() as char);
+        uart::clear_rx();
+    }
+    else if basic_irq & 1 != 0 {
+        RpiTimer::get().clear_irq();
+        //Flip the OK LED
+        if lit {
+            Gpio.ok_on(false);
+            lit = false;
+        }
+        else {
+            Gpio.ok_on(true);
+            lit = true;
+        }
     }
     else {
-        Gpio::new().ok_on(true);
-        lit = true;
+        println!("Basic: {:b}, Normal: {:b}", basic_irq, irq);
     }
 }

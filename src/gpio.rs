@@ -8,24 +8,17 @@ const LED_GPIO_BIT : isize = 16;
 
 use core::intrinsics::{volatile_load, volatile_store};
 
-pub struct Gpio {
-    addr: *mut u32
-}
+pub struct Gpio;
 
 impl Gpio {
-
-    pub fn new() -> Gpio {
-        Gpio {
-            addr: GPIO_BASE as *mut u32
-        }
-    }
 
     pub fn ok_on(&self, on: bool){
         let offset = if on { LED_GPCLR } else { LED_GPSET };
         unsafe {
-            let val = volatile_load(self.addr.offset(LED_GPFSEL));
-            volatile_store(self.addr.offset(LED_GPFSEL), val | 1 << LED_GPFBIT);
-            volatile_store(self.addr.offset(offset), (1 << LED_GPIO_BIT));
+            let base = GPIO_BASE as *mut u32;
+            let val = volatile_load(base.offset(LED_GPFSEL));
+            volatile_store(base.offset(LED_GPFSEL), val | 1 << LED_GPFBIT);
+            volatile_store(base.offset(offset), (1 << LED_GPIO_BIT));
         }
     }
 }

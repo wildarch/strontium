@@ -9,7 +9,9 @@ crate-type = ["staticlib"]
 
 [dependencies]
 rlibc = "1.0"
-#rust-libcore = "*"
+
+[target.x86_64-unknown-linux-gnu.dependencies]
+clippy = "*"
 
 [dependencies.allocator]
 path = "allocator"

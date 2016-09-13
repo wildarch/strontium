@@ -1,5 +1,4 @@
 #![allow(dead_code)]
-use core::mem::transmute;
 use core::intrinsics::volatile_store;
 use rpi_const::PERIPHERAL_BASE;
 
@@ -36,7 +35,8 @@ pub struct RpiTimer {
 impl RpiTimer {
     pub fn get() -> &'static mut RpiTimer{
         unsafe {
-            transmute(TIMER_BASE as *mut RpiTimer)
+            //transmute(TIMER_BASE as *mut RpiTimer)
+            &mut *(TIMER_BASE as *mut RpiTimer)
         }
     }
 

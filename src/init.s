@@ -4,7 +4,7 @@
 .global enable_interrupts
 .global disable_interrupts
 .global dmb
-.global get_pc
+.global shutdown
 
 // From the ARM ARM (Architecture Reference Manual). Make sure you get the
 // ARMv5 documentation which includes the ARMv6 documentation which is the
@@ -27,51 +27,41 @@
 .equ    CPSR_FIQ_INHIBIT,       0x40
 .equ    CPSR_THUMB,             0x20
 
+.equ    LOAD_ADDR,              0x8000
+
 // EXECUTION START
 _start:
-    //We conveniently jump to reset, so we can first setup the vector table
-    ldr pc, _reset_h
-    ldr pc, _undefined_instruction_vector_h
-    ldr pc, _software_interrupt_vector_h
-    ldr pc, _prefetch_abort_vector_h
-    ldr pc, _data_abort_vector_h
-    ldr pc, _unused_handler_h
-    ldr pc, _interrupt_vector_h
-    ldr pc, _fast_interrupt_vector_h
-
-    _reset_h:                           .word   _reset_
-    _undefined_instruction_vector_h:    .word   undefined_instruction_vector
-    _software_interrupt_vector_h:       .word   software_interrupt_vector
-    _prefetch_abort_vector_h:           .word   prefetch_abort_vector
-    _data_abort_vector_h:               .word   data_abort_vector
-    _unused_handler_h:                  .word   _reset_
-    _interrupt_vector_h:                .word   interrupt_vector
-    _fast_interrupt_vector_h:           .word   fast_interrupt_vector
+    b _reset_
 
 _reset_:
-    // We enter in supervisor mode
-    push    {r0}
+    //We are now in Supervisor mode
 
-    //Copy the vector table to the start of memory
-    mov     r0, #0x8000 // It starts at 0x8000 as that's where our image is loaded
-    mov     r1, #0x0000 // The vector table should be here
-    ldmia   r0!,{r2, r3, r4, r5, r6, r7, r8, r9}
-    stmia   r1!,{r2, r3, r4, r5, r6, r7, r8, r9}
-    ldmia   r0!,{r2, r3, r4, r5, r6, r7, r8, r9}
-    stmia   r1!,{r2, r3, r4, r5, r6, r7, r8, r9}
+    // Setup the stack.
+  	mov	sp, #0x8000
 
-    // Set the stack pointer at some point in RAM that won't harm us
-    // No matter what the GPU/CPU memory split, 64MB is available to the CPU
-    // Keep it within the limits and also keep it aligned to a 32-bit boundary!
-    mov     sp, #(64 * 1024 * 1024)
+  	// we're loaded at 0x8000, relocate to _start.
+  .relocate:
+  	// copy from r3 to r4.
+  	mov	r3, #LOAD_ADDR
+  	ldr	r4, =kernel_start
+  	ldr	r9, =kernel_end
+  1:
+  	// Load multiple from r3, and store at r4.
+  	ldmia	r3!, {r5-r8}
+  	stmia	r4!, {r5-r8}
 
-    // The rust main function
-    pop     {r0}
-    bl      main
+  	// If we're still below file_end, loop.
+  	cmp	r4, r9
+  	blo	1b
 
-    // If main does return for some reason, just catch it and stay here.
-_inf_loop:
-    b       _inf_loop
+  	// Call kernel_main
+  	ldr	r3, =main
+  	blx	r3
+
+    // If main does return, shut down
+shutdown:
+    wfe
+    b       shutdown
 
 interrupt_vector:
     /* Correct LR_irq; this is a quirk of how the ARM processor calls the
@@ -139,13 +129,6 @@ dmb:
   	.endfunc
 
 enable_interrupts:
-    /*
-    mrs     r0, cpsr
-    bic     r0, r0, #0x80
-    msr     cpsr_c, r0
-
-    mov     pc, lr
-    */
     cpsie   I
     mov     pc, lr
 
@@ -153,6 +136,24 @@ disable_interrupts:
     cpsid   I
     mov     pc, lr
 
-get_pc:
-    mov     r0, pc
-    mov     pc, lr
+
+.section ".text.vectors"
+.global __vectors__
+__vectors__:
+    ldr pc, _reset_h
+    ldr pc, _undefined_instruction_vector_h
+    ldr pc, _software_interrupt_vector_h
+    ldr pc, _prefetch_abort_vector_h
+    ldr pc, _data_abort_vector_h
+    ldr pc, _unused_handler_h
+    ldr pc, _interrupt_vector_h
+    ldr pc, _fast_interrupt_vector_h
+
+    _reset_h:                           .word   _reset_
+    _undefined_instruction_vector_h:    .word   undefined_instruction_vector
+    _software_interrupt_vector_h:       .word   software_interrupt_vector
+    _prefetch_abort_vector_h:           .word   prefetch_abort_vector
+    _data_abort_vector_h:               .word   data_abort_vector
+    _unused_handler_h:                  .word   _reset_
+    _interrupt_vector_h:                .word   interrupt_vector
+    _fast_interrupt_vector_h:           .word   fast_interrupt_vector
