@@ -1,6 +1,9 @@
 *.o
 *.elf
 *.img
+.idea/
+*.swp
+*.swo
 
 target/
 
