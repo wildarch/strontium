@@ -1,6 +1,7 @@
-target
-Cargo.lock
-
 *.o
 *.elf
 *.img
+
+target/
+
+Cargo.lock

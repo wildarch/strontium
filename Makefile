@@ -20,7 +20,7 @@ AS = $(TARGET)-as
 OBJCOPY = $(TARGET)-objcopy
 GCC = $(TARGET)-gcc
 
-GCC_VERSION = $(shell arm-none-eabi-gcc --version | grep -o "[0-9]\.[0-9]\.[0-9]")
+GCC_VERSION = $(shell arm-none-eabi-gcc --version | grep -o "[0-9]\.[0-9]\.[0-9]" | head -1)
 GCC_LIB = -L /usr/lib/gcc/arm-none-eabi/$(GCC_VERSION) -lgcc
 KERNEL_LIB = -L $(RELEASE) -l kernel
 LD_LIBS = $(KERNEL_LIB) $(GCC_LIB)
