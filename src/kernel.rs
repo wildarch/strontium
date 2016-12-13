@@ -63,7 +63,13 @@ pub extern fn main(_r0: u32, _r1: u32, _atags: *const u8){
     };
     println!("Boot complete");
 
-    load_kernel(_r0, _r1, _atags);
+    wait(40_000_000);
+
+    println!("Loading user program");
+
+    load_program(42);
+
+    println!("Returned from software interrupt");
 
     loop {
     }
@@ -71,9 +77,8 @@ pub extern fn main(_r0: u32, _r1: u32, _atags: *const u8){
 
 }
 
-#[allow(dead_code)]
-fn load_kernel(r0 : u32, r1: u32, atags: *const u8) {
-    //3 breaks to signal we're ready for a kernel
+fn load_program(r1: u32) {
+    //3 breaks to signal we're ready for a program
     print!("\x03\x03\x03");
     let size = uart::get_u32() as isize;
     print!("OK");
@@ -81,13 +86,18 @@ fn load_kernel(r0 : u32, r1: u32, atags: *const u8) {
     let base = 0x8000 as *mut u8;
     for i in 0..size {
         unsafe {
-            //*base.offset(i) = uart::getc();
             volatile_store(base.offset(i), uart::getc());
         }
     }
     println!("booting..");
-    let entry_fn: (fn(a: u32, b: u32, c: *const u8)) = unsafe { mem::transmute(base) };
-    unsafe { disable_interrupts(); } //Interrupts need to be disabled before we jump to the loaded kernel
-    entry_fn(r0, r1, atags);
+    let entry_fn: (fn(a: u32, b: u32)) = unsafe { mem::transmute(base) };
+    asm!("CPS 0x10")
+    entry_fn(0, r1);
     println!("entry function exited! halting...");
+}
+
+fn wait(n : usize) {
+    for _ in 0..n {
+        unsafe { asm!(""); }
+    }
 }

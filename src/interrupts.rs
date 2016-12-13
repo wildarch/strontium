@@ -7,6 +7,7 @@ use core::mem;
 use gpio::Gpio;
 use uart;
 use rpi_timer::RpiTimer;
+use syscall;
 
 use rpi_const::PERIPHERAL_BASE;
 
@@ -82,8 +83,12 @@ pub extern fn undefined_instruction_vector(){
 }
 
 #[no_mangle]
-pub extern fn software_interrupt_vector(){
-
+pub extern fn software_interrupt_vector_handler(r0: usize, r1: usize){
+    let code = r0 & 0xff;
+    match code {
+        0 => syscall::exit(r1),
+        _ => panic!("Unknown system call {}", code)
+    }
 }
 
 #[no_mangle]
