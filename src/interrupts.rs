@@ -33,7 +33,7 @@ pub struct IrqController {
 }
 
 impl IrqController {
-    pub fn get() -> &'static mut IrqController{
+    pub fn get() -> &'static mut IrqController {
         unsafe {
             &mut *(INTERRUPT_CONTROLLER_BASE as *mut IrqController)
         }

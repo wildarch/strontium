@@ -27,6 +27,7 @@ mod lang_items;
 pub use lang_items::*;
 
 use core::mem;
+use core::intrinsics::volatile_store;
 
 extern {
     fn enable_interrupts();
@@ -79,7 +80,10 @@ fn load_kernel(r0 : u32, r1: u32, atags: *const u8) {
     println!("Size: {}", size);
     let base = 0x8000 as *mut u8;
     for i in 0..size {
-        unsafe { *base.offset(i) = uart::getc(); }
+        unsafe {
+            //*base.offset(i) = uart::getc();
+            volatile_store(base.offset(i), uart::getc());
+        }
     }
     println!("booting..");
     let entry_fn: (fn(a: u32, b: u32, c: *const u8)) = unsafe { mem::transmute(base) };

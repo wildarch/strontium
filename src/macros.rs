@@ -16,7 +16,7 @@ pub fn _print(args: fmt::Arguments) {
     let mut writer = UartWriter {};
     match writer.write_fmt(args) {
         Ok(()) => {},
-        Err(_) => uart::write("[ERROR] Error writing to uart")
+        Err(_) => uart::write("[ERROR] Error writing to uart") //TODO Make led blink like a maniac
     }
 }
 
