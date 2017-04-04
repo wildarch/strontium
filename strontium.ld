@@ -2,6 +2,7 @@
 __aeabi_memcpy = memcpy;
 __aeabi_memmove = memmove;
 __sync_val_compare_and_swap_4 = abort; /* FIXME This is probably bad.. */
+rust_begin_unwind = abort; /* FIXME This is bad.. */
 
 relocate_addr = 0x2000000;
 

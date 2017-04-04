@@ -2,8 +2,6 @@
 #![feature(collections, alloc, allocator)]
 #![no_std]
 
-extern crate collections;
-extern crate alloc;
 extern crate rlibc;
 
 extern crate allocator;
@@ -16,7 +14,7 @@ mod macros;
 mod uart;
 mod gpio;
 mod rpi_const;
-
+mod syscall;
 mod interrupts;
 pub use interrupts::*;
 
@@ -91,7 +89,9 @@ fn load_program(r1: u32) {
     }
     println!("booting..");
     let entry_fn: (fn(a: u32, b: u32)) = unsafe { mem::transmute(base) };
-    asm!("CPS 0x10")
+    unsafe {
+        asm!("CPS 0x10");
+    }
     entry_fn(0, r1);
     println!("entry function exited! halting...");
 }
