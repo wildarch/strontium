@@ -78,8 +78,9 @@ pub extern fn fast_interrupt_vector(){
 }
 
 #[no_mangle]
-pub extern fn undefined_instruction_vector(){
-    panic!("Undefined instruction!");
+pub extern fn undefined_instruction_vector_handler(){
+    println!("Undefined instruction");
+    ::kernel_loop();
 }
 
 #[no_mangle]
@@ -87,6 +88,7 @@ pub extern fn software_interrupt_vector_handler(r0: usize, r1: usize){
     let code = r0 & 0xff;
     match code {
         0 => syscall::exit(r1),
+        1 => println!("Hello, world!"),
         _ => panic!("Unknown system call {}", code)
     }
 }

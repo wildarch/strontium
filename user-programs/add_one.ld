@@ -1,4 +1,4 @@
-relocate_addr = 0x2500000;
+relocate_addr = 0x0;
 
 ENTRY(_start)
 SECTIONS

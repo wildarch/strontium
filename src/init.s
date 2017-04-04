@@ -131,6 +131,20 @@ software_interrupt_vector:
     pop {r0-r4, r12, lr}
     rfeia sp!
 
+undefined_instruction_vector:
+    srsdb CPSR_MODE_SVR!
+    cpsid if, CPSR_MODE_SVR
+    push {r0-r4, r12, lr}
+    ldr r0, [lr,#-4]
+    and r4, sp, #4
+    sub sp, sp, r4
+    bl dmb
+    bl undefined_instruction_vector_handler
+    bl dmb
+    add sp, sp, r4
+    pop {r0-r4, r12, lr}
+    rfeia sp!
+
 /*
   Triggers a data memory barrier, all code that comes before this
   is guaranteed to be finished once we return from this function

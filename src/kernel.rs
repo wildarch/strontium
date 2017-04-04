@@ -30,6 +30,7 @@ use core::intrinsics::volatile_store;
 extern {
     fn enable_interrupts();
     fn disable_interrupts();
+    fn dmb();
     static mut vectors_start: u8;
     static vectors_end: u8;
 }
@@ -59,20 +60,27 @@ pub extern fn main(_r0: u32, _r1: u32, _atags: *const u8){
         memcpy(0x0 as *mut u8, start, size);
         enable_interrupts();
     };
-    println!("Boot complete");
+    println!("Boot complete.");
 
-    wait(40_000_000);
-
-    println!("Loading user program");
-
-    load_program(42);
-
-    println!("Returned from software interrupt");
-
-    loop {
+    //kernel_loop();
+    unsafe {
+        println!("Hello");
+        asm!("CPS 0x10");
+        println!("hihi");
+        asm!("svc 1");
+        asm!("svc 0");
     }
+}
 
-
+fn kernel_loop() {
+    println!("hi!");
+    //loop {
+        println!("In kernel_loop");
+        wait(120_000_000);
+        println!("Let's load up some user programs!");
+        load_program(42);
+    //}
+    kernel_loop();
 }
 
 fn load_program(r1: u32) {
@@ -89,9 +97,11 @@ fn load_program(r1: u32) {
     }
     println!("booting..");
     let entry_fn: (fn(a: u32, b: u32)) = unsafe { mem::transmute(base) };
+
     unsafe {
         asm!("CPS 0x10");
     }
+
     entry_fn(0, r1);
     println!("entry function exited! halting...");
 }
