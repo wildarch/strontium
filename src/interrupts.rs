@@ -78,8 +78,10 @@ pub extern fn fast_interrupt_vector(){
 }
 
 #[no_mangle]
-pub extern fn undefined_instruction_vector_handler(){
-    println!("Undefined instruction");
+pub extern fn undefined_instruction_vector_handler(r0: *const u32){
+    let addr = unsafe {r0.offset(-1)};
+    let opcode = unsafe { volatile_load(addr) };
+    println!("Undefined instruction {:x} at {:x}", opcode, addr as u32);
     ::kernel_loop();
 }
 

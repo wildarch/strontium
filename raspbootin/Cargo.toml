@@ -1,0 +1,9 @@
+[package]
+name = "raspbootin"
+version = "0.1.0"
+authors = ["wildarch <daandegraaf9@gmail.com>"]
+
+[dependencies]
+
+[dependencies.strontium_std]
+path = "../strontium-std"

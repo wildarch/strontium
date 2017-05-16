@@ -15,3 +15,6 @@ clippy = "*"
 
 [dependencies.allocator]
 path = "allocator"
+
+[dependencies.raspbootin]
+path = "raspbootin"

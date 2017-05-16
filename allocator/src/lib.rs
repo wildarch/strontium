@@ -17,12 +17,12 @@
 use core::intrinsics::copy;
 
 
-static mut heap_pointer: usize = 0x10000;
+static mut HEAP_POINTER: usize = 0x10000;
 
 #[no_mangle]
 pub unsafe extern "C" fn __rust_allocate(size: usize, _align: usize) -> *mut u8 {
-    let ptr = heap_pointer as *mut u8;
-    heap_pointer += size;
+    let ptr = HEAP_POINTER as *mut u8;
+    HEAP_POINTER += size;
     return ptr;
 }
 

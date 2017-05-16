@@ -138,6 +138,7 @@ undefined_instruction_vector:
     ldr r0, [lr,#-4]
     and r4, sp, #4
     sub sp, sp, r4
+    mov r0, r14
     bl dmb
     bl undefined_instruction_vector_handler
     bl dmb
