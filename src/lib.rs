@@ -84,22 +84,6 @@ fn kernel_loop() {
         let mut base = 0x8000 as *mut u8;
         unsafe {
             raspbootin::download_program(&mut UartChannel, base);
-            /*
-            uart::write("\x03\x03\x03");
-            let mut size = 0u32;
-            size |= (uart::getc() as u32);
-            size |= (uart::getc() as u32) << 8;
-            size |= (uart::getc() as u32) << 16;
-            size |= (uart::getc() as u32) << 24;
-            uart::write("OK");
-            println!("Size: {}", size);
-            
-            while size > 0 {
-                *base = uart::getc();
-                base = base.offset(1);
-                size -= 1;
-            }
-            */
         }
         let entry_fn: (fn()) = unsafe { mem::transmute(base) };
         entry_fn();
