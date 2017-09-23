@@ -37,15 +37,12 @@ extern {
     fn enable_interrupts();
     fn disable_interrupts();
     fn dmb();
-    fn play_sound();
     static mut vectors_start: u8;
     static vectors_end: u8;
 }
 
 #[no_mangle]
 pub extern fn main(_r0: u32, _r1: u32, _atags: *const u8){
-
-    unsafe { play_sound(); }
 
     unsafe {
         uart::init();
@@ -95,65 +92,76 @@ fn kernel_loop() {
     }
 }
 
-/*
+
 unsafe fn play_sound() {
+    //play_sound_init();
     
     //println!("Playing sound!");
-    const GPIO_GPFSEL4 : isize = 0x10;
+    const GPIO_GPFSEL4 : usize = 0x10;
     const GPIO_FSEL0_ALT0 : u32 = 0x4;
     const GPIO_FSEL5_ALT0 : u32 = 0x20000;
 
     // Setup audio jack for GPIO
+    
     use rpi_const::{GPIO_BASE, PERIPHERAL_BASE};
-    let base = GPIO_BASE as *mut u32;
-    volatile_store(base.offset(GPIO_GPFSEL4), GPIO_FSEL0_ALT0 + GPIO_FSEL5_ALT0);
+    
+    let gpio_gpfsel4 = GPIO_BASE + GPIO_GPFSEL4;
+    volatile_store(gpio_gpfsel4 as *mut u32, GPIO_FSEL0_ALT0 + GPIO_FSEL5_ALT0);
 
-    const CM_BASE: usize = 0x101_000;
-    const CM_PASSWORD: u32 = 0x5A_000_000;
-    const CM_PWMDIV: isize = 0x0A4;
+    
+    const CM_BASE: usize = 0x101000;
+    const CM_PASSWORD: u32 = 0x5A000000;
+    const CM_PWMDIV: usize = 0xA4;
     const CM_ENAB: u32 = 0x10;
     const CM_SRC_OSCILLATOR: u32 = 0x01;
-    const CM_PWMCTL: isize = 0x0A0;
-    let cm_base = (CM_BASE + PERIPHERAL_BASE) as *mut u32;
-    volatile_store(cm_base.offset(CM_PWMDIV), CM_PASSWORD + 0x2000);
-    volatile_store(cm_base.offset(CM_PWMCTL), CM_PASSWORD + CM_ENAB + CM_SRC_OSCILLATOR);
-
+    const CM_PWMCTL: usize = 0x0A0;
+    
+    let div = CM_PASSWORD + 0x2000;
+    let cm_pwm_div = PERIPHERAL_BASE + CM_BASE + CM_PWMDIV;
+    volatile_store(cm_pwm_div as *mut u32, div);
+    let cm_pwm_ctl = PERIPHERAL_BASE + CM_BASE + CM_PWMCTL;
+    volatile_store(cm_pwm_ctl as *mut u32, CM_PASSWORD + CM_ENAB + CM_SRC_OSCILLATOR);
+    
     const PWM_BASE: usize = 0x20C000;
-    const PWM_RNG1: isize = 0x10;
-    const PWM_RNG2: isize = 0x20;
-    const PWM_CTL: isize = 0x0;
+    const PWM_RNG1: usize = 0x10;
+    const PWM_RNG2: usize = 0x20;
+    const PWM_CTL: usize = 0x0;
     const PWM_USEF2: u32 = 0x2000;
     const PWM_PWEN2: u32 = 0x100;
     const PWM_USEF1: u32 = 0x20;
     const PWM_PWEN1: u32 = 0x1;
     const PWM_CLRF1: u32 = 0x40;
-    let pwm_base = (PWM_BASE + PERIPHERAL_BASE) as *mut u32;
-    volatile_store(pwm_base.offset(PWM_RNG1), 0x190);
-    volatile_store(pwm_base.offset(PWM_RNG2), 0x190);
+    
+    let pwm_base = PWM_BASE + PERIPHERAL_BASE;
+    
+    let pwm_rng1 = pwm_base + PWM_RNG1;
+    volatile_store(pwm_rng1 as *mut u32, 0x190);
+    let pwm_rng2 = pwm_base + PWM_RNG2;
+    volatile_store(pwm_rng2 as *mut u32, 0x190);
 
-    volatile_store(pwm_base.offset(PWM_CTL), PWM_USEF2 + PWM_PWEN2 + PWM_USEF1 + PWM_PWEN1 + PWM_CLRF1);
-
-    const PWM_FIF1 : isize = 0x18;
-    const PWM_STA: isize = 0x4;
+    let pwm_ctl = pwm_base + PWM_CTL;
+    volatile_store(pwm_ctl  as *mut u32, PWM_USEF2 + PWM_PWEN2 + PWM_USEF1 + PWM_PWEN1 + PWM_CLRF1);
+    
+    const PWM_FIF1 : usize = 0x18;
+    const PWM_STA: usize = 0x4;
     const PWM_FULL1: u32 = 0x1;
     
     let mut a = 0;
 
-    //println!("Peripherals initialized");
     loop {
-        volatile_store(pwm_base.offset(PWM_FIF1), a);
-        volatile_store(pwm_base.offset(PWM_FIF1), a);
+        let pwm_fif1 = pwm_base + PWM_FIF1;
+        volatile_store(pwm_fif1 as *mut u32, a);
+
         a = (a + 3) % 255;
         loop {
-            let status = volatile_load(pwm_base.offset(PWM_STA));
-            //println!("Status: {:x}", status);
+            let pwm_sta = pwm_base + PWM_STA;
+            let status = volatile_load(pwm_sta as *mut u32);
             if status & PWM_FULL1 == 0 {
                 break;
             }
         }
     }
 }
-*/
 
 fn wait(n : usize) {
     for _ in 0..n {
