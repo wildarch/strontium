@@ -5,6 +5,7 @@
 .global disable_interrupts
 .global dmb
 .global shutdown
+.global play_sound
 
 // From the ARM ARM (Architecture Reference Manual). Make sure you get the
 // ARMv5 documentation which includes the ARMv6 documentation which is the
@@ -34,6 +35,7 @@ _start:
     b _reset_
 
 _reset_:
+
     //We are now in Supervisor mode
 
     // Setup the stack.
@@ -53,6 +55,8 @@ _reset_:
   	// If we're still below file_end, loop.
   	cmp	r4, r9
   	blo	1b
+
+    bl play_sound
 
   	// Call kernel_main
   	ldr	r3, =main
@@ -146,6 +150,66 @@ undefined_instruction_vector:
     pop {r0-r4, r12, lr}
     rfeia sp!
 
+.set PERIPHERAL_BASE, 0x20000000
+.set GPIO_BASE, 0x200000
+.set GPIO_GPFSEL4 , 0x10
+.set GPIO_FSEL0_ALT0 , 0x4
+.set GPIO_FSEL5_ALT0 , 0x20000
+.set CM_BASE, 0x101000
+.set CM_PASSWORD, 0x5A000000
+.set CM_PWMDIV, 0x0A4
+.set CM_ENAB, 0x10
+.set CM_SRC_OSCILLATOR, 0x01
+.set CM_PWMCTL, 0x0A0
+.set PWM_BASE, 0x20C000
+.set PWM_RNG1, 0x10
+.set PWM_RNG2, 0x20
+.set PWM_CTL, 0x0
+.set PWM_USEF2, 0x2000
+.set PWM_PWEN2, 0x100
+.set PWM_USEF1, 0x20
+.set PWM_PWEN1, 0x1
+.set PWM_CLRF1, 0x40
+.set PWM_FIF1 , 0x18
+.set PWM_STA, 0x4
+.set PWM_FULL1, 0x1
+
+.set ERRORMASK, 0x3C
+
+play_sound:
+    .func play_sound
+    ldr r0,=(PERIPHERAL_BASE + GPIO_BASE)
+    ldr r1, =(GPIO_FSEL0_ALT0 + GPIO_FSEL5_ALT0)
+    str r1, [r0,#GPIO_GPFSEL4]
+
+    ldr r0, =(PERIPHERAL_BASE + CM_BASE)
+    ldr r1, =(CM_PASSWORD + 0x2000)
+    ldr r1, [r0,#CM_PWMDIV]
+
+    ldr r1, =(CM_PASSWORD + CM_ENAB + CM_SRC_OSCILLATOR)
+    str r1, [r0,#CM_PWMCTL]
+
+    ldr r0, =(PERIPHERAL_BASE + PWM_BASE)
+    mov r1, #0x190
+    str r1, [r0,#PWM_RNG1]
+    str r1, [r0,#PWM_RNG2]
+
+    ldr r1, =(PWM_USEF1 + PWM_PWEN1 + PWM_CLRF1)
+    str r1, [r0,#PWM_CTL]
+
+    eor r2, r2, r2
+
+    FIFO_Write:
+        str r2, [r0,#PWM_FIF1]
+        add r2, r2, #3
+        and r2, r2, #255
+        FIFO_Wait:
+            ldr r3, [r0,#PWM_STA]
+            tst r3, #PWM_FULL1
+            bne FIFO_Wait
+        b FIFO_Write
+    mov pc, lr
+    .endfunc
 /*
   Triggers a data memory barrier, all code that comes before this
   is guaranteed to be finished once we return from this function

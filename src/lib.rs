@@ -37,12 +37,15 @@ extern {
     fn enable_interrupts();
     fn disable_interrupts();
     fn dmb();
+    fn play_sound();
     static mut vectors_start: u8;
     static vectors_end: u8;
 }
 
 #[no_mangle]
 pub extern fn main(_r0: u32, _r1: u32, _atags: *const u8){
+
+    unsafe { play_sound(); }
 
     unsafe {
         uart::init();
@@ -78,7 +81,7 @@ fn kernel_loop() {
     println!("hi!");
     loop {
         println!("In kernel_loop");
-        unsafe {play_sound(); }
+        unsafe { play_sound(); }
         wait(120_000_000);
 
         println!("Let's load some kernels!");
@@ -92,8 +95,8 @@ fn kernel_loop() {
     }
 }
 
+/*
 unsafe fn play_sound() {
-    disable_interrupts();
     
     //println!("Playing sound!");
     const GPIO_GPFSEL4 : isize = 0x10;
@@ -125,8 +128,8 @@ unsafe fn play_sound() {
     const PWM_PWEN1: u32 = 0x1;
     const PWM_CLRF1: u32 = 0x40;
     let pwm_base = (PWM_BASE + PERIPHERAL_BASE) as *mut u32;
-    volatile_store(pwm_base.offset(PWM_RNG1), 0xC8);
-    volatile_store(pwm_base.offset(PWM_RNG2), 0xC8);
+    volatile_store(pwm_base.offset(PWM_RNG1), 0x190);
+    volatile_store(pwm_base.offset(PWM_RNG2), 0x190);
 
     volatile_store(pwm_base.offset(PWM_CTL), PWM_USEF2 + PWM_PWEN2 + PWM_USEF1 + PWM_PWEN1 + PWM_CLRF1);
 
@@ -150,7 +153,7 @@ unsafe fn play_sound() {
         }
     }
 }
-
+*/
 
 fn wait(n : usize) {
     for _ in 0..n {
