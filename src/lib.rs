@@ -1,12 +1,15 @@
-#![feature(lang_items, asm, core_intrinsics, naked_functions)]
-#![feature(collections, alloc, allocator)]
+#![feature(lang_items, asm, core_intrinsics, naked_functions, global_allocator)]
+#![feature(collections)]
 #![no_std]
 
 extern crate rlibc;
+pub use rlibc::*;
 
 extern crate allocator;
+use allocator::Stronthoop;
 
-pub use rlibc::*;
+#[global_allocator]
+static ALLOCATOR: Stronthoop = Stronthoop;
 
 #[macro_use]
 mod macros;
@@ -78,9 +81,25 @@ fn kernel_loop() {
         wait(120_000_000);
 
         println!("Let's load some kernels!");
-        let base = 0x8000 as *mut u8;
+        let mut base = 0x8000 as *mut u8;
         unsafe {
             raspbootin::download_program(&mut UartChannel, base);
+            /*
+            uart::write("\x03\x03\x03");
+            let mut size = 0u32;
+            size |= (uart::getc() as u32);
+            size |= (uart::getc() as u32) << 8;
+            size |= (uart::getc() as u32) << 16;
+            size |= (uart::getc() as u32) << 24;
+            uart::write("OK");
+            println!("Size: {}", size);
+            
+            while size > 0 {
+                *base = uart::getc();
+                base = base.offset(1);
+                size -= 1;
+            }
+            */
         }
         let entry_fn: (fn()) = unsafe { mem::transmute(base) };
         entry_fn();

@@ -1,52 +1,29 @@
-#![feature(allocator)]
 #![no_std]
-// The compiler needs to be instructed that this crate is an allocator in order
-// to realize that when this is linked in another allocator like jemalloc should
-// not be linked in
-#![allocator]
+#![feature(allocator_api)]
+#![feature(alloc)]
+#![feature(global_allocator)]
 
-// Listed below are the five allocation functions currently required by custom
-// allocators. Their signatures and symbol names are not currently typechecked
-// by the compiler, but this is a future extension and are required to match
-// what is found below.
-//
-// Note that the standard `malloc` and `realloc` functions do not provide a way
-// to communicate alignment so this implementation would need to be improved
-// with respect to alignment in that aspect.
+extern crate alloc;
+use alloc::allocator::{Alloc, AllocErr, Layout};
+use core::result::Result;
 
-use core::intrinsics::copy;
+pub struct Stronthoop;
 
+const MAX_MEM: usize = 0x20000000;
 
 static mut HEAP_POINTER: usize = 0x10000;
 
-#[no_mangle]
-pub unsafe extern "C" fn __rust_allocate(size: usize, _align: usize) -> *mut u8 {
-    let ptr = HEAP_POINTER as *mut u8;
-    HEAP_POINTER += size;
-    return ptr;
-}
+unsafe impl<'a> Alloc for &'a Stronthoop {
+    unsafe fn alloc(&mut self, layout: Layout) -> Result<*mut u8, AllocErr> {
+        let mut ptr = HEAP_POINTER + layout.size();
+        if ptr > MAX_MEM {
+            return Err(AllocErr::Exhausted{request: layout})
+        }
+        ptr += layout.align() - (ptr % layout.align());
+        Ok(ptr as *mut u8)
+    }
 
-#[no_mangle]
-pub extern "C" fn __rust_deallocate(_ptr: *mut u8, _old_size: usize, _align: usize) {
-    //nop
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn __rust_reallocate(ptr: *mut u8, old_size: usize, size: usize,
-                                align: usize) -> *mut u8 {
-    //nop
-    let new_ptr = __rust_allocate(size, align);
-    copy(ptr, new_ptr, old_size);
-    return new_ptr;
-}
-
-#[no_mangle]
-pub extern "C" fn __rust_reallocate_inplace(_ptr: *mut u8, old_size: usize,
-                                        _size: usize, _align: usize) -> usize {
-    old_size // this api is not supported by lib
-}
-
-#[no_mangle]
-pub extern "C" fn __rust_usable_size(size: usize, _align: usize) -> usize {
-    size
+    unsafe fn dealloc(&mut self, ptr: *mut u8, layout: Layout) {
+        unimplemented!()
+    }
 }
