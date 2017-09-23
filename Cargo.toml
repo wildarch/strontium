@@ -9,6 +9,7 @@ crate-type = ["staticlib"]
 
 [dependencies]
 rlibc = "1.0"
+strontium-std = { path = "strontium-std" }
 
 [target.x86_64-unknown-linux-gnu.dependencies]
 clippy = "*"

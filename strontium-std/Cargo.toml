@@ -1,5 +1,5 @@
 [package]
-name = "strontium_std"
+name = "strontium-std"
 version = "0.1.0"
 authors = ["wildarch <daandegraaf9@gmail.com>"]
 

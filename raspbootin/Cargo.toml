@@ -5,5 +5,5 @@ authors = ["wildarch <daandegraaf9@gmail.com>"]
 
 [dependencies]
 
-[dependencies.strontium_std]
+[dependencies.strontium-std]
 path = "../strontium-std"

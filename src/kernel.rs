@@ -12,11 +12,13 @@ pub use rlibc::*;
 mod macros;
 
 mod uart;
+use uart::channel::UartChannel;
 mod gpio;
 mod rpi_const;
 mod syscall;
 mod interrupts;
 extern crate raspbootin;
+extern crate strontium_std;
 pub use interrupts::*;
 
 mod rpi_timer;
@@ -41,9 +43,6 @@ pub extern fn main(_r0: u32, _r1: u32, _atags: *const u8){
 
     unsafe {
         uart::init();
-    }
-    loop {
-        uart::writeln("Hello, world!");
     }
 
     println!("Stack and UART initialized");
@@ -80,7 +79,9 @@ fn kernel_loop() {
 
         println!("Let's load some kernels!");
         let base = 0x8000 as *mut u8;
-        raspbootin::download_program(base);
+        unsafe {
+            raspbootin::download_program(&mut UartChannel, base);
+        }
         let entry_fn: (fn()) = unsafe { mem::transmute(base) };
         entry_fn();
         println!("ERR: Bootloader returned!");

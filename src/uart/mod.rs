@@ -1,6 +1,8 @@
 use core::intrinsics::{volatile_load, volatile_store};
 use core::mem;
 
+pub mod channel;
+
 use rpi_const::GPIO_BASE;
 // Controls actuation of pull up/down to ALL GPIO pins.
 const GPPUD: usize = (GPIO_BASE + 0x94);
